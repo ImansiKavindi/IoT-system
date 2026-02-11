@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const sensorRoutes = require('./routes/sensor');
+const deviceRoutes = require('./routes/device');
 require('dotenv').config();
 require('./config/mqtt');
 
@@ -12,6 +13,7 @@ app.use(bodyParser.json());
 
 // Sensor routes
 app.use('/sensor', sensorRoutes);
+app.use('/device', deviceRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
