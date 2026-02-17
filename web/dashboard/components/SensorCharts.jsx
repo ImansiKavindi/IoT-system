@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import { io } from 'socket.io-client';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+
+const socket = io('http://localhost:3000'); // backend with socket.io
 
 const SensorCharts = () => {
   const [dataPoints, setDataPoints] = useState({
@@ -12,23 +15,27 @@ const SensorCharts = () => {
     timestamps: [],
   });
 
-  // Simulate receiving data from backend (replace later with real API or WebSocket)
   useEffect(() => {
-    const interval = setInterval(() => {
+    socket.on('telemetry', ({ topic, message }) => {
       const now = new Date().toLocaleTimeString();
-      const voltage = (220 + Math.random() * 5).toFixed(1);
-      const current = (5 + Math.random()).toFixed(2);
-      const power = (voltage * current).toFixed(1);
+      setDataPoints(prev => {
+        const newData = { ...prev };
 
-      setDataPoints((prev) => ({
-        voltage: [...prev.voltage.slice(-9), voltage],
-        current: [...prev.current.slice(-9), current],
-        power: [...prev.power.slice(-9), power],
-        timestamps: [...prev.timestamps.slice(-9), now],
-      }));
-    }, 2000);
+        if (topic === 'stm32/pzem/voltage') newData.voltage.push(message);
+        if (topic === 'stm32/pzem/current') newData.current.push(message);
+        if (topic === 'stm32/pzem/power') newData.power.push(message);
 
-    return () => clearInterval(interval);
+        newData.timestamps.push(now);
+
+        // Keep only last 10 points
+        newData.voltage = newData.voltage.slice(-10);
+        newData.current = newData.current.slice(-10);
+        newData.power = newData.power.slice(-10);
+        newData.timestamps = newData.timestamps.slice(-10);
+
+        return newData;
+      });
+    });
   }, []);
 
   const chartData = (label, dataset) => ({
